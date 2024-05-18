@@ -33,24 +33,24 @@ AgeDataset <- AgeDataset %>%
   )
 
 # Set seed for reproducibility
-head(AgeDataset)
+#head(AgeDataset)
 
 # Check data types
-str(AgeDataset)
+#str(AgeDataset)
 
 # Set seed for reproducibility
-set.seed(123)
+#set.seed(123)
 
 # Split the data
-split <- sample.split(AgeDataset$contains_four, SplitRatio = 0.7)
+#split <- sample.split(AgeDataset$contains_four, SplitRatio = 0.7)
 
 # Create training and testing sets
-training_set <- subset(AgeDataset, split == TRUE)
-testing_set <- subset(AgeDataset, split == FALSE)
+#training_set <- subset(AgeDataset, split == TRUE)
+#testing_set <- subset(AgeDataset, split == FALSE)
 
 # Display the number of observations in each set
-cat("Number of observations in the training set:", nrow(training_set), "\n")
-cat("Number of observations in the testing set:", nrow(testing_set), "\n")
+#cat("Number of observations in the training set:", nrow(training_set), "\n")
+#cat("Number of observations in the testing set:", nrow(testing_set), "\n")
 ```
 
 * we need more here
@@ -223,4 +223,19 @@ model_1_preds %>%
     accuracy = total_correct/n()
   )
 ```
+```{r}
+#cost <- function(r, pi = 0) {
+#  mean(abs(r - (pi > 0.5)))
+}
+
+# Fit the logistic regression model
+model_1 <- glm(contains_super ~ age_of_death, data = AgeDataset, family = "binomial")
+
+# Perform cross-validation
+logistic_cv1 <- cv.glm(AgeDataset, model_1, cost, K = 5)
+
+# Print the results
+print(logistic_cv1$delta)
+```
+
 
