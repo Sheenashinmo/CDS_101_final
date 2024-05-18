@@ -17,7 +17,12 @@ output:
 ## Set up - Naeun
 ```{r set up, include=FALSE}
 #
+rm(list = ls())
+
 suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(ggmosaic))
+suppressPackageStartupMessages(library(modelr))
+suppressPackageStartupMessages(library(boot))
 suppressPackageStartupMessages(library(infer))
 suppressPackageStartupMessages(library(dplyr))
 # 
@@ -77,13 +82,21 @@ null_distribution %>%
 #grouping to group 4 vs group 0
 AgeDataset <- AgeDataset %>%
   mutate(contains_four = ifelse(grepl("4", as.character(birth_year)), 1, 0))
+
+AgeDataset <- AgeDataset %>%
+  mutate(contains_super = as.logical(contains_four)
+  )
+```
+```{r}
+AgeDataset <- AgeDataset %>%
+  filter(birth_year > 0)
 ```
 
 ```{r}
 #col_types=...
 #as.logistic (true/false)
 ```
-
+### graph
 ```{r}
 AgeDataset %>% 
   pivot_longer(cols = age_of_death|birth_year,
@@ -93,16 +106,61 @@ AgeDataset %>%
   geom_histogram(
     mapping = aes(
       x = value1,
-      fill = did_survive
+      fill = contains_super
     ),
     position = "identity",
     alpha = 0.6
   ) +
-  facet_wrap(~Pinfo1, scales = "free") +
+  facet_wrap(~info1, scales = "free") +
   labs(
     x = "value",
     y = "frequency",
-    title = "Histogram of survival due to age and fare"
+    title = "Histogram of survival due to age of death and birth year"
   )
 ```
+### tidied graph
+```{r}
+AgeDataset %>% 
+  pivot_longer(cols = age_of_death|birth_year,
+               names_to = "info1",
+               values_to = "value1") %>% 
+  ggplot() +
+  geom_histogram(
+    mapping = aes(
+      x = value1,
+      fill = contains_super
+    ),
+    position = "identity",
+    alpha = 0.6,
+    bins = 30
+  ) +
+  facet_wrap(~info1, scales = "free") +
+  labs(
+    x = "value",
+    y = "frequency",
+    title = "Histogram of survival due to age of death and birth year"
+  )
+```
+```{r}
+top_occupations <- AgeDataset %>%
+  count(Occupation) %>%
+  top_n(15, wt = n) %>%
+  pull(Occupation)
 
+filtered_data <- AgeDataset %>%
+  filter(Occupation %in% top_occupations)
+
+# Pivot the dataset and plot
+filtered_data %>%
+  pivot_longer(cols = c(Country, Occupation, Gender), names_to = "info2", values_to = "value2") %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = value2, fill = contains_super), alpha = 0.6) +
+  facet_wrap(~info2, scales = "free") +
+  labs(
+    x = "value", 
+    y = "frequency", 
+    title = "Bar graph of survivors by passenger info"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
