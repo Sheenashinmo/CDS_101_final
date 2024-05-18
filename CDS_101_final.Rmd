@@ -1,0 +1,108 @@
+---
+title: "CDS 101 Final Project"
+author: "Group 4"
+date: "`r Sys.Date()`"
+documentclass: article
+geometry: margin=1in
+fontsize: 11pt
+output:
+  pdf_document:
+    toc: false
+    df_print: kable
+    fig_caption: false
+    number_sections: false
+    dev: pdf
+    highlight: tango
+---
+## Set up - Naeun
+```{r set up, include=FALSE}
+#
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(infer))
+suppressPackageStartupMessages(library(dplyr))
+# 
+AgeDataset <- read_csv("AgeDataset-V1.csv")
+```
+
+## Tyding the dataset - Naeun
+```{r}
+#rename the variable
+AgeDataset <- AgeDataset %>%
+  rename(
+    birth_year= `Birth year`,
+    death_year = `Death year`,
+    manner_of_death = `Manner of death`,
+    age_of_death = `Age of death`
+  )
+```
+
+* we need more here
+
+## Null/Alternative Hypothesis - Gahyun
+```{r}
+women_data <- AgeDataset %>%
+  filter(Gender == 'Female')
+```
+```{r}
+women_data <- women_data %>%
+  mutate(contains_4 = str_detect(as.character(birth_year), "4"))
+```
+```{r}
+set.seed(123)
+null_distribution <- women_data %>%
+  specify(response = age_of_death, explanatory = contains_4) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>% 
+  calculate(stat = "diff in means", order = c(TRUE, FALSE))
+```
+```{r}
+observed_diff <- women_data %>%
+  specify(response = age_of_death, explanatory = contains_4) %>%
+  calculate(stat = "diff in means", order = c(TRUE, FALSE))
+```
+```{r}
+p_value <- null_distribution %>%
+  get_p_value(obs_stat = observed_diff, direction = "both")
+
+null_distribution %>%
+  visualize() +
+  shade_p_value(obs_stat = observed_diff, direction = "both") +
+  labs(title = "Simulation Based Null Distribution",
+       x = "Difference in Means",
+       y = "Count")
+```
+
+##Logistic regression modeling - Shin & Jinuk
+```{r}
+#grouping to group 4 vs group 0
+AgeDataset <- AgeDataset %>%
+  mutate(contains_four = ifelse(grepl("4", as.character(birth_year)), 1, 0))
+```
+
+```{r}
+#col_types=...
+#as.logistic (true/false)
+```
+
+```{r}
+AgeDataset %>% 
+  pivot_longer(cols = age_of_death|birth_year,
+               names_to = "info1",
+               values_to = "value1") %>% 
+  ggplot() +
+  geom_histogram(
+    mapping = aes(
+      x = value1,
+      fill = did_survive
+    ),
+    position = "identity",
+    alpha = 0.6
+  ) +
+  facet_wrap(~Pinfo1, scales = "free") +
+  labs(
+    x = "value",
+    y = "frequency",
+    title = "Histogram of survival due to age and fare"
+  )
+```
+
