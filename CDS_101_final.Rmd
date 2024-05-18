@@ -2,17 +2,7 @@
 title: "CDS 101 Final Project"
 author: "Group 4"
 date: "`r Sys.Date()`"
-documentclass: article
-geometry: margin=1in
-fontsize: 11pt
-output:
-  pdf_document:
-    toc: false
-    df_print: kable
-    fig_caption: false
-    number_sections: false
-    dev: pdf
-    highlight: tango
+output: pdf_document
 ---
 ## Set up - Naeun
 ```{r set up, include=FALSE}
@@ -25,6 +15,8 @@ suppressPackageStartupMessages(library(modelr))
 suppressPackageStartupMessages(library(boot))
 suppressPackageStartupMessages(library(infer))
 suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(caTools))
+
 # 
 AgeDataset <- read_csv("AgeDataset-V1.csv")
 ```
@@ -39,6 +31,26 @@ AgeDataset <- AgeDataset %>%
     manner_of_death = `Manner of death`,
     age_of_death = `Age of death`
   )
+
+# Set seed for reproducibility
+head(AgeDataset)
+
+# Check data types
+str(AgeDataset)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split the data
+split <- sample.split(AgeDataset$contains_four, SplitRatio = 0.7)
+
+# Create training and testing sets
+training_set <- subset(AgeDataset, split == TRUE)
+testing_set <- subset(AgeDataset, split == FALSE)
+
+# Display the number of observations in each set
+cat("Number of observations in the training set:", nrow(training_set), "\n")
+cat("Number of observations in the testing set:", nrow(testing_set), "\n")
 ```
 
 * we need more here
@@ -96,7 +108,7 @@ AgeDataset <- AgeDataset %>%
 #col_types=...
 #as.logistic (true/false)
 ```
-### graph
+### percentage graph
 ```{r}
 AgeDataset %>% 
   pivot_longer(cols = age_of_death|birth_year,
@@ -106,6 +118,7 @@ AgeDataset %>%
   geom_histogram(
     mapping = aes(
       x = value1,
+      y = after_stat(count) / sum(after_stat(count)) * 100,
       fill = contains_super
     ),
     position = "identity",
@@ -164,3 +177,50 @@ filtered_data %>%
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+```{r}
+AgeDataset <- AgeDataset %>% 
+  filter(!is.na(Gender) & !is.na(age_of_death) & !is.na(contains_super))
+print("1")
+
+# Convert necessary columns to factors
+AgeDataset <- AgeDataset %>%
+  mutate(Gender = as.factor(Gender),
+         contains_super = as.factor(contains_super))
+
+# Create the mosaic plot
+AgeDataset %>% 
+  ggplot() +
+  geom_mosaic(aes(weight = age_of_death, x = product(Gender), fill = Gender)) +
+  facet_grid(. ~ contains_super, scales = "free") +
+  labs(x = "Gender", 
+       y = "Count", 
+       title = "Mosaic Plot of superstitioon") +
+  theme_minimal()
+```
+
+```{r}
+model_1 <- glm(contains_super ~ age_of_death, data = AgeDataset, family = "binomial")
+```
+```{r}
+model_1_preds <-  AgeDataset %>% 
+  add_predictions(model_1, type = "response") %>% 
+  mutate(
+    outcome = if_else(condition = pred > 0.5,
+                      true = 1,
+                      false = 0)
+  )
+
+model_1_preds %>% 
+  mutate(
+    correct = if_else(
+      condition = contains_four == outcome,
+      true = 1,
+      false = 0
+    )
+  ) %>% 
+  summarize(
+    total_correct = sum(correct),
+    accuracy = total_correct/n()
+  )
+```
+
